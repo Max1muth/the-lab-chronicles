@@ -11,18 +11,15 @@ print(rn.randint(1, 20))  # => 8 поменять местами максима�
 with open("text.txt", "r", encoding="utf-8") as f:
     t3xt = f.read()
 
-j = list(t3xt)
-for i in range(len(j)):
-    j[i] = ord(j[i])
-m1, m1i = max(j), j.index(max(j))
-m2, m2i = min(j[j.index(m1):]), j.index(min(j[j.index(m1):]))
-# [j.find(m1):]
-print(m1, m2)
-print(j)
-j[m1i], j[m2i] = m2, m1
-print(j)
+def f3ncti0n(text):
+    l1st = list(text)
+    for i in range(len(l1st)):
+        l1st[i] = ord(l1st[i])
+    m1, m1i = max(l1st), l1st.index(max(l1st))
+    m2, m2i = min(l1st[l1st.index(m1):]), l1st.index(min(l1st[l1st.index(m1):]))
+    l1st[m1i], l1st[m2i] = m2, m1
+    for i in range(len(l1st)):
+        l1st[i] = chr(l1st[i])
+    return "".join(l1st)
 
-for i in range(len(j)):
-    j[i] = chr(j[i])
-
-print("".join(j))
+print(f3ncti0n(t3xt))
