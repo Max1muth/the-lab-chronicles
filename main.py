@@ -1,25 +1,16 @@
-import random as rn
+# Напишите программу, строящую график функции. Коэффициенты a,b,c и диапазон задаются с клавиатуры.
+# f(x)=a·sin(x)-cos(b·x)
 
-rn.seed(221)
-print(rn.randint(1, 20))  # => 8 поменять местами максимальный элемент
-# массива и минимальный элемент части массива, расположенной после максимального.
+import math
 
-# text = "какой-то текст"
-# with open("text.txt", "w", encoding="utf-8") as f:
-#     f.write(text)
+a, b, length = int(input("Введите a: ")), int(input("Введите b: ")), int(input("Введите длину: "))
+x, y = [], []
 
-with open("text.txt", "r", encoding="utf-8") as f:
-    t3xt = f.read()
+for i in range(length):
+    x += [i]
+    y += [round(a*math.sin(i) - math.cos(b*i), 3)]  # в радианах ( math.degress(11) - перевод в градусы ) 
 
-def f3ncti0n(text):
-    l1st = list(text)
-    for i in range(len(l1st)):
-        l1st[i] = ord(l1st[i])
-    m1, m1i = max(l1st), l1st.index(max(l1st))
-    m2, m2i = min(l1st[l1st.index(m1):]), l1st.index(min(l1st[l1st.index(m1):]))
-    l1st[m1i], l1st[m2i] = m2, m1
-    for i in range(len(l1st)):
-        l1st[i] = chr(l1st[i])
-    return "".join(l1st)
-
-print(f3ncti0n(t3xt))
+print(x, y)
+print(11, math.sin(11))
+print(math.degrees(11), math.sin(math.degrees(11)))
+print(math.sin(math.radians(30)))
