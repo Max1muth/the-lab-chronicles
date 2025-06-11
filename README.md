@@ -1,1 +1,1 @@
-# the-lab-chronicles (это кто-то читает? кстати печально, забыл pip freeze > requirements.txt на прошлой ветке)
+# the-lab-chronicles данные формируются в creating_data
