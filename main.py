@@ -1,112 +1,158 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.neighbors import KNeighborsClassifier
-import random
+from matplotlib.widgets import Slider
+from collections import defaultdict
 
-# 1. Инициализация исходных данных
-def generate_data(pointsCount1=50, pointsCount2=50):
-    # Границы для первого класса
-    xMin1, xMax1 = -5, 0
-    yMin1, yMax1 = -5, 0
-    # Границы для второго класса
-    xMin2, xMax2 = 0, 5
-    yMin2, yMax2 = 0, 5
-    
-    # Генерация точек для первого класса
-    x1 = [random.uniform(xMin1, xMax1) for _ in range(pointsCount1)]
-    y1 = [random.uniform(yMin1, yMax1) for _ in range(pointsCount1)]
-    class1 = [[x1[i], y1[i]] for i in range(pointsCount1)]
-    
-    # Генерация точек для второго класса
-    x2 = [random.uniform(xMin2, xMax2) for _ in range(pointsCount2)]
-    y2 = [random.uniform(yMin2, yMax2) for _ in range(pointsCount2)]
-    class2 = [[x2[i], y2[i]] for i in range(pointsCount2)]
-    
-    # Объединение данных
-    x = np.array(class1 + class2)
-    y = np.array([0] * pointsCount1 + [1] * pointsCount2)
-    
-    return x, y
+def generate_data(num_points_per_cluster=20, centers=None, radii=None):
+    """
+    Генерирует исходные данные для кластеризации.
+    Точки генерируются внутри колец с заданными центрами и радиусами.
 
-# 2. Разбиение данных на обучающую и тестовую выборки
-def train_test_split(x, y, p=0.8):
-    np.random.seed(42)  # Для воспроизводимости
-    indices = np.random.permutation(len(x))
-    train_size = int(len(x) * p)
-    
-    train_indices = indices[:train_size]
-    test_indices = indices[train_size:]
-    
-    x_train = x[train_indices]
-    x_test = x[test_indices]
-    y_train = y[train_indices]
-    y_test = y[test_indices]
-    
-    return x_train, x_test, y_train, y_test
+    Args:
+        num_points_per_cluster (int): Количество точек для каждого кластера.
+        centers (list of tuples): Список кортежей (x, y) для центров кластеров.
+                                  По умолчанию: [(2, 2), (8, 3), (4, 9)].
+        radii (list of float): Список радиусов для каждого кластера.
+                               По умолчанию: [1.5, 1.0, 1.8].
 
-# 3. Реализация метода k ближайших соседей
-def fit(x_train, y_train, x_test, k=3):
-    model = KNeighborsClassifier(n_neighbors=k)
-    model.fit(x_train, y_train)
-    y_predict = model.predict(x_test)
-    return y_predict
+    Returns:
+        tuple: Списки x и y координат всех сгенерированных точек.
+    """
+    if centers is None:
+        centers = [(2, 2), (8, 3), (4, 9)]  # Произвольные центры
+    if radii is None:
+        radii = [1.5, 1.0, 1.8]  # Произвольные радиусы
 
-# 4. Расчёт метрики accuracy
-def computeAccuracy(y_test, y_predict):
-    correct = np.sum(y_test == y_predict)
-    total = len(y_test)
-    accuracy = correct / total
-    return accuracy
+    all_x = []
+    all_y = []
 
-# 5. Визуализация результатов
-def plot_results(x_train, y_train, x_test, y_test, y_predict):
-    plt.figure(figsize=(10, 8))
-    
-    # Точки обучающей выборки
-    plt.scatter(x_train[y_train == 0][:, 0], x_train[y_train == 0][:, 1], 
-                c='blue', marker='o', label='Train Class 0', s=50)
-    plt.scatter(x_train[y_train == 1][:, 0], x_train[y_train == 1][:, 1], 
-                c='blue', marker='x', label='Train Class 1', s=50)
-    
-    # Точки тестовой выборки
-    for i in range(len(x_test)):
-        if y_test[i] == y_predict[i]:
-            # Верно классифицированные точки
-            color = 'green'
-            marker = 'o' if y_test[i] == 0 else 'x'
-        else:
-            # Неверно классифицированные точки
-            color = 'red'
-            marker = 'o' if y_test[i] == 0 else 'x'
-        plt.scatter(x_test[i, 0], x_test[i, 1], c=color, marker=marker, s=50)
-    
-    # Подписи для тестовых точек
-    plt.scatter([], [], c='green', marker='o', label='Test Class 0 (Correct)')
-    plt.scatter([], [], c='green', marker='x', label='Test Class 1 (Correct)')
-    plt.scatter([], [], c='red', marker='o', label='Test Class 0 (Incorrect)')
-    plt.scatter([], [], c='red', marker='x', label='Test Class 1 (Incorrect)')
-    
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title(f'KNN Classification (k=3, Accuracy: {computeAccuracy(y_test, y_predict):.4f})')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    for i, (cx, cy) in enumerate(centers):
+        r = radii[i]
+        for _ in range(num_points_per_cluster):
+            angle = 2 * np.pi * np.random.rand()
+            # Генерируем точки внутри круга, а не строго на окружности
+            current_r = r * np.sqrt(np.random.rand())
+            x = cx + current_r * np.cos(angle)
+            y = cy + current_r * np.sin(angle)
+            all_x.append(x)
+            all_y.append(y)
+    return all_x, all_y
 
-# 6. Основной код
-if __name__ == "__main__":
-    # Генерация данных
-    x, y = generate_data()
-    
-    # Разбиение данных
-    x_train, x_test, y_train, y_test = train_test_split(x, y, p=0.8)
-    
-    # Применение KNN
-    y_predict = fit(x_train, y_train, x_test, k=3)
-    
-    # Вычисление и вывод точности
-    accuracy = computeAccuracy(y_test, y_predict)
-    print(f"Accuracy: {accuracy:.4f}")
-    
-    # Визуализация
-    plot_results(x_train, y_train, x_test, y_test, y_predict)
+def euclidean_distance(point1, point2):
+    """Вычисляет евклидово расстояние между двумя точками."""
+    return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+
+def kmeans(x, y, k=3, max_iterations=100):
+    """
+    Реализует метод кластеризации k-средних.
+
+    Args:
+        x (list): Список координат по оси x исходных точек.
+        y (list): Список координат по оси y исходных точек.
+        k (int): Количество искомых кластеров.
+        max_iterations (int): Максимальное количество итераций для алгоритма.
+
+    Returns:
+        tuple:
+            - all_labels_history (list of lists): История меток кластеров для каждой точки
+                                                  на каждой итерации.
+            - all_centroids_history (list of lists): История координат центроидов кластеров
+                                                     на каждой итерации.
+    """
+    points = np.array(list(zip(x, y)))
+    num_points = len(points)
+
+    # Инициализация центроидов: случайно выбираем k точек из исходных данных
+    random_indices = np.random.choice(num_points, k, replace=False)
+    centroids = points[random_indices].tolist()
+
+    all_labels_history = []
+    all_centroids_history = []
+
+    for iteration in range(max_iterations):
+        # Шаг 1: Присвоение точек к ближайшим центроидам
+        labels = []
+        for point in points:
+            distances = [euclidean_distance(point, centroid) for centroid in centroids]
+            closest_centroid = np.argmin(distances)
+            labels.append(closest_centroid)
+        all_labels_history.append(labels)
+        all_centroids_history.append(centroids)
+
+        # Шаг 2: Обновление центроидов
+        new_centroids = []
+        for i in range(k):
+            # Находим все точки, принадлежащие текущему кластеру
+            cluster_points = [points[j] for j, label in enumerate(labels) if label == i]
+            if cluster_points:
+                new_centroids.append(np.mean(cluster_points, axis=0).tolist())
+            else:
+                # Если кластер пуст, оставляем центроид на прежнем месте или переинициализируем
+                new_centroids.append(centroids[i])
+
+        # Проверка на сходимость
+        if np.allclose(centroids, new_centroids):
+            print(f"Алгоритм сошелся на итерации {iteration + 1}")
+            break
+        centroids = new_centroids
+
+    # Добавляем финальное состояние после возможного выхода по сходимости
+    if iteration + 1 < max_iterations: # Если не достигли max_iterations
+        labels = []
+        for point in points:
+            distances = [euclidean_distance(point, centroid) for centroid in centroids]
+            closest_centroid = np.argmin(distances)
+            labels.append(closest_centroid)
+        all_labels_history.append(labels)
+        all_centroids_history.append(centroids)
+
+    return all_labels_history, all_centroids_history
+
+# Генерация данных
+x_data, y_data = generate_data(num_points_per_cluster=20,
+                               centers=[(2, 2), (8, 3), (4, 9)],
+                               radii=[1.5, 1.0, 1.8])
+
+# Применение k-средних
+k_clusters = 3
+labels_history, centroids_history = kmeans(x_data, y_data, k=k_clusters)
+
+# Настройка графика
+fig, ax = plt.subplots(figsize=(10, 8))
+plt.subplots_adjust(bottom=0.25)
+
+# Начальное отображение (первая итерация)
+scatter = ax.scatter(x_data, y_data, c=labels_history[0], cmap='viridis', s=50, alpha=0.8)
+centroids_plot, = ax.plot([c[0] for c in centroids_history[0]],
+                          [c[1] for c in centroids_history[0]],
+                          'X', markersize=10, color='red', markeredgecolor='black', label='Centroids')
+
+ax.set_title(f'K-Means Clustering (Iteration 0)')
+ax.set_xlabel('X Coordinate')
+ax.set_ylabel('Y Coordinate')
+ax.grid(True)
+ax.legend()
+
+# Создание ползунка
+ax_slider = plt.axes([0.15, 0.1, 0.7, 0.03], facecolor='lightgoldenrodyellow')
+slider = Slider(ax_slider, 'Iteration', 0, len(labels_history) - 1, valinit=0, valstep=1)
+
+# Функция обновления графика при изменении ползунка
+def update(val):
+    iteration = int(slider.val)
+    current_labels = labels_history[iteration]
+    current_centroids = centroids_history[iteration]
+
+    # Обновление цвета точек
+    scatter.set_array(current_labels)
+
+    # Обновление положения центроидов
+    centroids_plot.set_data([c[0] for c in current_centroids],
+                            [c[1] for c in current_centroids])
+
+    ax.set_title(f'K-Means Clustering (Iteration {iteration})')
+    fig.canvas.draw_idle()
+
+slider.on_changed(update)
+
+plt.show()

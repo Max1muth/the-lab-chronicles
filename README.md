@@ -1,1 +1,1 @@
-# the-lab-chronicles данные формируются в creating_data
+# the-lab-chronicles (с какого коммита я забыл стереть сообщение "данные собирались<...> ?)
