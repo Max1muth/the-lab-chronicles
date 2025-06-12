@@ -1,158 +1,84 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-from collections import defaultdict
 
-def generate_data(num_points_per_cluster=20, centers=None, radii=None):
-    """
-    Генерирует исходные данные для кластеризации.
-    Точки генерируются внутри колец с заданными центрами и радиусами.
+# Generate data
+np.random.seed(42)  # For reproducibility
+x_min, x_max, points = -10, 10, 50
+x = np.linspace(x_min, x_max, points)
+true_k, true_b = 2, 3  # True parameters for y = kx + b
+y = true_k * x + true_b + np.random.uniform(-3, 3, points)  # Add noise
 
-    Args:
-        num_points_per_cluster (int): Количество точек для каждого кластера.
-        centers (list of tuples): Список кортежей (x, y) для центров кластеров.
-                                  По умолчанию: [(2, 2), (8, 3), (4, 9)].
-        radii (list of float): Список радиусов для каждого кластера.
-                               По умолчанию: [1.5, 1.0, 1.8].
+# Mean Squared Error
+def mse(x, y, k, b):
+    y_pred = k * x + b
+    return np.mean((y_pred - y) ** 2)
 
-    Returns:
-        tuple: Списки x и y координат всех сгенерированных точек.
-    """
-    if centers is None:
-        centers = [(2, 2), (8, 3), (4, 9)]  # Произвольные центры
-    if radii is None:
-        radii = [1.5, 1.0, 1.8]  # Произвольные радиусы
+# Partial derivatives
+def get_dk(x, y, k, b):
+    return (2 / len(x)) * np.sum(x * (k * x + b - y))
 
-    all_x = []
-    all_y = []
+def get_db(x, y, k, b):
+    return (2 / len(x)) * np.sum(k * x + b - y)
 
-    for i, (cx, cy) in enumerate(centers):
-        r = radii[i]
-        for _ in range(num_points_per_cluster):
-            angle = 2 * np.pi * np.random.rand()
-            # Генерируем точки внутри круга, а не строго на окружности
-            current_r = r * np.sqrt(np.random.rand())
-            x = cx + current_r * np.cos(angle)
-            y = cy + current_r * np.sin(angle)
-            all_x.append(x)
-            all_y.append(y)
-    return all_x, all_y
+# Gradient descent
+def fit(x, y, speed, epochs, k0, b0):
+    k, b = k0, b0
+    k_list = [k0]
+    b_list = [b0]
+    mse_list = [mse(x, y, k0, b0)]
+    
+    for i in range(epochs):
+        k = k - speed * get_dk(x, y, k, b)
+        b = b - speed * get_db(x, y, k, b)
+        k_list.append(k)
+        b_list.append(b)
+        mse_list.append(mse(x, y, k, b))
+    
+    return k_list, b_list, mse_list
 
-def euclidean_distance(point1, point2):
-    """Вычисляет евклидово расстояние между двумя точками."""
-    return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+# Parameters for gradient descent
+speed = 0.001
+epochs = 100
+k0, b0 = 0, 0  # Initial guesses
 
-def kmeans(x, y, k=3, max_iterations=100):
-    """
-    Реализует метод кластеризации k-средних.
+# Run gradient descent
+k_list, b_list, mse_list = fit(x, y, speed, epochs, k0, b0)
 
-    Args:
-        x (list): Список координат по оси x исходных точек.
-        y (list): Список координат по оси y исходных точек.
-        k (int): Количество искомых кластеров.
-        max_iterations (int): Максимальное количество итераций для алгоритма.
-
-    Returns:
-        tuple:
-            - all_labels_history (list of lists): История меток кластеров для каждой точки
-                                                  на каждой итерации.
-            - all_centroids_history (list of lists): История координат центроидов кластеров
-                                                     на каждой итерации.
-    """
-    points = np.array(list(zip(x, y)))
-    num_points = len(points)
-
-    # Инициализация центроидов: случайно выбираем k точек из исходных данных
-    random_indices = np.random.choice(num_points, k, replace=False)
-    centroids = points[random_indices].tolist()
-
-    all_labels_history = []
-    all_centroids_history = []
-
-    for iteration in range(max_iterations):
-        # Шаг 1: Присвоение точек к ближайшим центроидам
-        labels = []
-        for point in points:
-            distances = [euclidean_distance(point, centroid) for centroid in centroids]
-            closest_centroid = np.argmin(distances)
-            labels.append(closest_centroid)
-        all_labels_history.append(labels)
-        all_centroids_history.append(centroids)
-
-        # Шаг 2: Обновление центроидов
-        new_centroids = []
-        for i in range(k):
-            # Находим все точки, принадлежащие текущему кластеру
-            cluster_points = [points[j] for j, label in enumerate(labels) if label == i]
-            if cluster_points:
-                new_centroids.append(np.mean(cluster_points, axis=0).tolist())
-            else:
-                # Если кластер пуст, оставляем центроид на прежнем месте или переинициализируем
-                new_centroids.append(centroids[i])
-
-        # Проверка на сходимость
-        if np.allclose(centroids, new_centroids):
-            print(f"Алгоритм сошелся на итерации {iteration + 1}")
-            break
-        centroids = new_centroids
-
-    # Добавляем финальное состояние после возможного выхода по сходимости
-    if iteration + 1 < max_iterations: # Если не достигли max_iterations
-        labels = []
-        for point in points:
-            distances = [euclidean_distance(point, centroid) for centroid in centroids]
-            closest_centroid = np.argmin(distances)
-            labels.append(closest_centroid)
-        all_labels_history.append(labels)
-        all_centroids_history.append(centroids)
-
-    return all_labels_history, all_centroids_history
-
-# Генерация данных
-x_data, y_data = generate_data(num_points_per_cluster=20,
-                               centers=[(2, 2), (8, 3), (4, 9)],
-                               radii=[1.5, 1.0, 1.8])
-
-# Применение k-средних
-k_clusters = 3
-labels_history, centroids_history = kmeans(x_data, y_data, k=k_clusters)
-
-# Настройка графика
-fig, ax = plt.subplots(figsize=(10, 8))
+# Visualization with slider
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 plt.subplots_adjust(bottom=0.25)
 
-# Начальное отображение (первая итерация)
-scatter = ax.scatter(x_data, y_data, c=labels_history[0], cmap='viridis', s=50, alpha=0.8)
-centroids_plot, = ax.plot([c[0] for c in centroids_history[0]],
-                          [c[1] for c in centroids_history[0]],
-                          'X', markersize=10, color='red', markeredgecolor='black', label='Centroids')
+# Plot data points and initial regression line
+ax1.scatter(x, y, color='blue', label='Data points')
+line, = ax1.plot(x, k_list[0] * x + b_list[0], color='red', label='Regression line')
+ax1.set_xlabel('x')
+ax1.set_ylabel('y')
+ax1.set_title('Linear Regression')
+ax1.legend()
+ax1.grid(True)
 
-ax.set_title(f'K-Means Clustering (Iteration 0)')
-ax.set_xlabel('X Coordinate')
-ax.set_ylabel('Y Coordinate')
-ax.grid(True)
-ax.legend()
+# Plot MSE
+mse_line, = ax2.plot(range(len(mse_list)), mse_list, color='green')
+ax2.set_xlabel('Epoch')
+ax2.set_ylabel('MSE')
+ax2.set_title('Mean Squared Error')
+ax2.grid(True)
 
-# Создание ползунка
-ax_slider = plt.axes([0.15, 0.1, 0.7, 0.03], facecolor='lightgoldenrodyellow')
-slider = Slider(ax_slider, 'Iteration', 0, len(labels_history) - 1, valinit=0, valstep=1)
+# Slider
+ax_slider = plt.axes([0.15, 0.1, 0.65, 0.03])
+slider = Slider(ax_slider, 'Epoch', 0, epochs, valinit=0, valstep=1)
 
-# Функция обновления графика при изменении ползунка
+# Update function for slider
 def update(val):
-    iteration = int(slider.val)
-    current_labels = labels_history[iteration]
-    current_centroids = centroids_history[iteration]
-
-    # Обновление цвета точек
-    scatter.set_array(current_labels)
-
-    # Обновление положения центроидов
-    centroids_plot.set_data([c[0] for c in current_centroids],
-                            [c[1] for c in current_centroids])
-
-    ax.set_title(f'K-Means Clustering (Iteration {iteration})')
+    epoch = int(slider.val)
+    line.set_ydata(k_list[epoch] * x + b_list[epoch])
+    ax1.set_title(f'Linear Regression (Epoch {epoch}, k={k_list[epoch]:.2f}, b={b_list[epoch]:.2f})')
     fig.canvas.draw_idle()
 
 slider.on_changed(update)
 
 plt.show()
+
+# Print final parameters
+print(f"Final k: {k_list[-1]:.2f}, Final b: {b_list[-1]:.2f}, Final MSE: {mse_list[-1]:.2f}")
