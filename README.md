@@ -1,1 +1,1 @@
-# the-lab-chronicles данные формируются в creating_data
+# the-lab-chronicles данные потенциально могли формироваться в creating_data
