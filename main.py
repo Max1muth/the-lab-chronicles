@@ -36,7 +36,8 @@ def apply_clustering(algorithm, X, k=3):
     elif algorithm == 'DBSCAN':
         model = DBSCAN(eps=1.0, min_samples=5)
         labels = model.fit_predict(X)
-        return labels, None, False
+        centroids = [X[labels == i].mean(axis=0) for i in range(k) if len(X[labels == i]) > 0]
+        return labels, centroids, False
     
     elif algorithm == 'Agglomerative':
         model = AgglomerativeClustering(n_clusters=k)
